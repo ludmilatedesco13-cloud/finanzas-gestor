@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinanzApp — Gestor de Finanzas Personales</title>
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- CSS Separado -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+    <section id="authScreen" class="auth-screen">
+        <div class="auth-card glass">
+            <div class="brand auth-brand">
+                <i class="fa-solid fa-wallet brand-icon"></i>
+                <span class="brand-title">FinanzApp</span>
+            </div>
+            <p class="auth-subtitle">Tus finanzas, organizadas y protegidas.</p>
+            <h1 id="authTitle">Iniciar sesión</h1>
+            <p id="authMessage" class="auth-message" role="status" aria-live="polite"></p>
+            <form id="authForm" novalidate>
+                <div id="authNameGroup" class="form-group" hidden>
+                    <label for="authName">Nombre</label>
+                    <input id="authName" name="name" class="form-input" maxlength="120" autocomplete="name">
+                </div>
+                <div class="form-group">
+                    <label for="authEmail">Correo electrónico</label>
+                    <input id="authEmail" name="email" type="email" class="form-input" maxlength="254" autocomplete="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="authPassword">Contraseña</label>
+                    <input id="authPassword" name="password" type="password" class="form-input" minlength="12" maxlength="128" autocomplete="current-password" required>
+                    <span id="passwordHint" class="form-hint">Usá al menos 12 caracteres.</span>
+                </div>
+                <button id="authSubmit" type="submit" class="btn btn-primary auth-submit">Iniciar sesión</button>
+            </form>
+            <button id="authModeToggle" class="auth-mode-toggle" type="button">¿Primera vez? Crear cuenta</button>
+            <p class="auth-security"><i class="fa-solid fa-lock"></i> Sesión cifrada y privada</p>
+        </div>
+    </section>
+
+    <div class="app-layout" id="appLayout" hidden>
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="brand">
+                <i class="fa-solid fa-wallet brand-icon"></i>
+                <span class="brand-title">FinanzApp</span>
+            </div>
+
+            <nav class="nav-menu">
+                <a href="#dashboard" class="nav-item active" data-tab="dashboard">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#transactions" class="nav-item" data-tab="transactions">
+                    <i class="fa-solid fa-list-check"></i>
+                    <span>Transacciones</span>
+                </a>
+                <a href="#budgets" class="nav-item" data-tab="budgets">
+                    <i class="fa-solid fa-chart-simple"></i>
+                    <span>Presupuestos</span>
+                </a>
+                <a href="#debts" class="nav-item" data-tab="debts">
+                    <i class="fa-solid fa-credit-card"></i>
+                    <span>Tarjetas / Deudas</span>
+                </a>
+                <a href="#goals" class="nav-item" data-tab="goals">
+                    <i class="fa-solid fa-bullseye"></i>
+                    <span>Metas & Fondo</span>
+                </a>
+                <a href="#simulator" class="nav-item" data-tab="simulator">
+                    <i class="fa-solid fa-calculator"></i>
+                    <span>Interés Compuesto</span>
+                </a>
+            </nav>
+
+            <div class="theme-toggle" id="themeToggleBtn">
+                <i class="fa-solid fa-moon"></i>
+                <span>Modo Oscuro</span>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            
+            <!-- Top Navbar -->
+            <header class="top-nav">
+                <div class="welcome-text">
+                    <h1>Bienvenido de nuevo, <span id="userNameHeader">Usuario</span> 👋</h1>
+                    <p>Aquí está el estado financiero consolidado de tu mes.</p>
+                </div>
+                <div class="nav-actions">
+                    <button class="btn btn-outline" id="exportJsonBtn"><i class="fa-solid fa-download"></i> Exportar JSON</button>
+                    <button class="btn btn-outline" id="logoutBtn" type="button"><i class="fa-solid fa-arrow-right-from-bracket"></i> Cerrar sesión</button>
+                    <button class="btn btn-primary" id="openAddTransactionModal"><i class="fa-solid fa-plus"></i> Nueva Transacción</button>
+                </div>
+            </header>
+            <div id="connectionStatus" class="connection-status" role="status" aria-live="polite"></div>
+
+            <!-- TAB 1: DASHBOARD -->
+            <section id="dashboard-tab" class="tab-content active">
+                <div class="kpi-grid">
+                    <div class="kpi-card glass">
+                        <div class="kpi-info">
+                            <span class="kpi-label">Balance Total</span>
+                            <span class="kpi-value" id="kpiBalance">$0.00</span>
+                        </div>
+                        <div class="kpi-icon icon-balance"><i class="fa-solid fa-scale-balanced"></i></div>
+                    </div>
+                    <div class="kpi-card glass">
+                        <div class="kpi-info">
+                            <span class="kpi-label">Ingresos del Mes</span>
+                            <span class="kpi-value positive" id="kpiIncome">$0.00</span>
+                        </div>
+                        <div class="kpi-icon icon-income"><i class="fa-solid fa-arrow-trend-up"></i></div>
+                    </div>
+                    <div class="kpi-card glass">
+                        <div class="kpi-info">
+                            <span class="kpi-label">Gastos del Mes</span>
+                            <span class="kpi-value negative" id="kpiExpense">$0.00</span>
+                        </div>
+                        <div class="kpi-icon icon-expense"><i class="fa-solid fa-arrow-trend-down"></i></div>
+                    </div>
+                    <div class="kpi-card glass">
+                        <div class="kpi-info">
+                            <span class="kpi-label">Tasa de Ahorro</span>
+                            <span class="kpi-value" id="kpiSavingsRate">0%</span>
+                        </div>
+                        <div class="kpi-icon icon-savings"><i class="fa-solid fa-piggy-bank"></i></div>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-card glass">
+                        <h3>Distribución de Gastos por Categoria</h3>
+                        <div class="chart-container">
+                            <canvas id="categoryChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card glass">
+                        <h3>Evolución Mensual (Ingresos vs Gastos)</h3>
+                        <div class="chart-container">
+                            <canvas id="monthlyTrendChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="recent-section glass">
+                    <div class="section-header">
+                        <h3>Últimas Transacciones</h3>
+                        <a href="#transactions" class="view-all-link" id="goToTransactions">Ver todas</a>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Categoría</th>
+                                    <th>Descripción</th>
+                                    <th>Tipo</th>
+                                    <th>Monto</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentTransactionsTable">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: TRANSACTIONS -->
+            <section id="transactions-tab" class="tab-content">
+                <div class="glass card-container">
+                    <div class="filters-bar">
+                        <input type="text" id="searchInput" placeholder="Buscar por descripción..." class="form-input">
+                        <select id="filterType" class="form-input">
+                            <option value="ALL">Todos los tipos</option>
+                            <option value="INCOME">Ingresos</option>
+                            <option value="EXPENSE">Gastos</option>
+                        </select>
+                        <select id="filterCategory" class="form-input">
+                            <option value="ALL">Todas las categorías</option>
+                            <option value="Sueldo">Sueldo</option>
+                            <option value="Inversiones">Inversiones</option>
+                            <option value="Freelance">Freelance</option>
+                            <option value="Vivienda">Vivienda</option>
+                            <option value="Alimentación">Alimentación</option>
+                            <option value="Transporte">Transporte</option>
+                            <option value="Servicios">Servicios</option>
+                            <option value="Ocio/Entretenimiento">Ocio/Entretenimiento</option>
+                            <option value="Salud">Salud</option>
+                            <option value="Otros">Otros</option>
+                        </select>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Categoría</th>
+                                    <th>Descripción</th>
+                                    <th>Tipo</th>
+                                    <th>Monto</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="allTransactionsTable">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: BUDGETS -->
+            <section id="budgets-tab" class="tab-content">
+                <div class="glass card-container">
+                    <div class="section-header">
+                        <h2>Límites de Presupuesto Mensual</h2>
+                        <button class="btn btn-outline" id="openBudgetModal"><i class="fa-solid fa-sliders"></i> Ajustar Presupuestos</button>
+                    </div>
+                    <p class="subtitle">Gestiona topes máximos por categoría para evitar gastar más de lo planeado.</p>
+                    <div class="budgets-grid" id="budgetsList">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: DEBTS & CREDIT CARDS -->
+            <section id="debts-tab" class="tab-content">
+                <div class="glass card-container">
+                    <div class="section-header">
+                        <h2>Tarjetas de Crédito y Control de Deudas</h2>
+                        <button class="btn btn-outline" id="openDebtModal"><i class="fa-solid fa-plus"></i> Registrar Deuda</button>
+                    </div>
+                    <div class="debts-grid" id="debtsList">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: GOALS & EMERGENCY FUND -->
+            <section id="goals-tab" class="tab-content">
+                <div class="glass card-container">
+                    <div class="section-header">
+                        <h2>Metas de Ahorro & Fondo de Emergencia</h2>
+                        <button class="btn btn-outline" id="openGoalModal"><i class="fa-solid fa-plus"></i> Nueva Meta</button>
+                    </div>
+                    <div class="goals-grid" id="goalsList">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 6: SIMULATOR -->
+            <section id="simulator-tab" class="tab-content">
+                <div class="glass card-container">
+                    <h2>Simulador de Interés Compuesto</h2>
+                    <p class="subtitle">Calcula el crecimiento de tu capital en el tiempo con aportes constantes e interés.</p>
+                    
+                    <div class="simulator-layout">
+                        <form id="simForm" class="sim-form">
+                            <div class="form-group">
+                                <label>Monto Inicial ($)</label>
+                                <input type="number" id="simInitial" value="1000" class="form-input" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Aporte Mensual ($)</label>
+                                <input type="number" id="simMonthly" value="200" class="form-input" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Tasa de Interés Anual Estimada (%)</label>
+                                <input type="number" step="0.1" id="simRate" value="8" class="form-input" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Años de Inversión</label>
+                                <input type="number" id="simYears" value="10" class="form-input" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-calculator"></i> Calcular Proyección</button>
+                        </form>
+
+                        <div class="sim-results">
+                            <div class="sim-kpis">
+                                <div class="sim-card">
+                                    <span>Total Invertido</span>
+                                    <h3 id="simTotalInvested">$0.00</h3>
+                                </div>
+                                <div class="sim-card">
+                                    <span>Intereses Ganados</span>
+                                    <h3 class="positive" id="simTotalInterest">$0.00</h3>
+                                </div>
+                                <div class="sim-card highlight">
+                                    <span>Monto Final Estimado</span>
+                                    <h3 id="simFinalAmount">$0.00</h3>
+                                </div>
+                            </div>
+                            <div class="chart-container" style="height: 280px; margin-top:20px;">
+                                <canvas id="simChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+
+    <!-- Modal de transacciones -->
+    <div class="modal-backdrop" id="transactionModal" aria-hidden="true">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Nueva Transacción</h3>
+                <button class="close-btn" type="button" data-close-modal aria-label="Cerrar">&times;</button>
+            </div>
+            <form id="txForm">
+                <input type="hidden" id="txId">
+                <div class="form-group">
+                    <label for="txType">Tipo</label>
+                    <select id="txType" class="form-input" required>
+                        <option value="EXPENSE">Gasto</option>
+                        <option value="INCOME">Ingreso</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="txAmount">Monto ($)</label>
+                    <input type="number" step="0.01" min="0.01" id="txAmount" class="form-input" placeholder="0.00" required>
+                </div>
+                <div class="form-group">
+                    <label for="txCategory">Categoría</label>
+                    <select id="txCategory" class="form-input" required>
+                        <option value="Alimentación">Alimentación</option>
+                        <option value="Vivienda">Vivienda</option>
+                        <option value="Transporte">Transporte</option>
+                        <option value="Servicios">Servicios</option>
+                        <option value="Ocio/Entretenimiento">Ocio/Entretenimiento</option>
+                        <option value="Salud">Salud</option>
+                        <option value="Sueldo">Sueldo</option>
+                        <option value="Freelance">Freelance</option>
+                        <option value="Inversiones">Inversiones</option>
+                        <option value="Otros">Otros</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="txDate">Fecha</label>
+                    <input type="date" id="txDate" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label for="txDescription">Descripción</label>
+                    <input type="text" id="txDescription" class="form-input" placeholder="Ej. Compras del supermercado" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-close-modal>Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Transacción</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-backdrop" id="budgetModal" aria-hidden="true">
+        <div class="modal-card">
+            <div class="modal-header"><h3 id="budgetModalTitle">Nuevo presupuesto</h3><button class="close-btn" type="button" data-close-modal aria-label="Cerrar">&times;</button></div>
+            <form id="budgetForm">
+                <input type="hidden" id="budgetId">
+                <div class="form-group"><label for="budgetCategory">Categoría</label><input id="budgetCategory" class="form-input" maxlength="80" required></div>
+                <div class="form-group"><label for="budgetLimit">Límite mensual ($)</label><input id="budgetLimit" type="number" min="0.01" step="0.01" class="form-input" required></div>
+                <div class="modal-footer"><button type="button" class="btn btn-outline" data-close-modal>Cancelar</button><button type="submit" class="btn btn-primary">Guardar</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-backdrop" id="debtModal" aria-hidden="true">
+        <div class="modal-card">
+            <div class="modal-header"><h3 id="debtModalTitle">Registrar deuda</h3><button class="close-btn" type="button" data-close-modal aria-label="Cerrar">&times;</button></div>
+            <form id="debtForm">
+                <input type="hidden" id="debtId">
+                <div class="form-group"><label for="debtTitle">Nombre</label><input id="debtTitle" class="form-input" maxlength="120" required></div>
+                <div class="form-group"><label for="debtTotal">Monto total ($)</label><input id="debtTotal" type="number" min="0.01" step="0.01" class="form-input" required></div>
+                <div class="form-group"><label for="debtPaid">Monto pagado ($)</label><input id="debtPaid" type="number" min="0" step="0.01" value="0" class="form-input" required></div>
+                <div class="form-group"><label for="debtDueDate">Fecha de vencimiento</label><input id="debtDueDate" type="date" class="form-input"></div>
+                <div class="modal-footer"><button type="button" class="btn btn-outline" data-close-modal>Cancelar</button><button type="submit" class="btn btn-primary">Guardar</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-backdrop" id="goalModal" aria-hidden="true">
+        <div class="modal-card">
+            <div class="modal-header"><h3 id="goalModalTitle">Nueva meta</h3><button class="close-btn" type="button" data-close-modal aria-label="Cerrar">&times;</button></div>
+            <form id="goalForm">
+                <input type="hidden" id="goalId">
+                <div class="form-group"><label for="goalTitle">Nombre</label><input id="goalTitle" class="form-input" maxlength="120" required></div>
+                <div class="form-group"><label for="goalTarget">Monto objetivo ($)</label><input id="goalTarget" type="number" min="0.01" step="0.01" class="form-input" required></div>
+                <div class="form-group"><label for="goalCurrent">Monto ahorrado ($)</label><input id="goalCurrent" type="number" min="0" step="0.01" value="0" class="form-input" required></div>
+                <div class="modal-footer"><button type="button" class="btn btn-outline" data-close-modal>Cancelar</button><button type="submit" class="btn btn-primary">Guardar</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div id="loadingIndicator" class="loading-indicator" role="status" aria-live="polite" hidden>
+        <span class="spinner" aria-hidden="true"></span><span>Sincronizando con Neon…</span>
+    </div>
+    <div id="toastRegion" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+
+    <!-- El cliente sólo accede al API del mismo origen; las credenciales se mantienen en el Worker. -->
+    <script src="js/neon-config.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
